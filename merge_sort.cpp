@@ -11,11 +11,12 @@ struct arg_struct {    //struct of parameters for the threads.
 };
 
 
-int* arr;            //input array
+int* arr1;            //input array
+int* arr2;
 
 int n;             //array size
 
-float time_taken;  
+float time_taken[2];  
 
 
 int* createArray(int n) //function to allocate the matrices in memory
@@ -38,13 +39,15 @@ void Load(const char* input_file)//function that reads input matrices from a giv
     
     fscanf(pRead,"%d",&n);
     
-    arr = createArray(n);
+    arr1 = createArray(n);
+    arr2 = createArray(n);
     
     int i=0;
 
     while(!feof(pRead) && i<n)
     {
-         fscanf(pRead,"%d",&arr[i]);		
+         fscanf(pRead,"%d",&arr1[i]);
+         arr2[i]=arr1[i];		
     	 i++;
     }   
     
@@ -55,14 +58,29 @@ void save()//function that writes ouput matrices and time taken for each approac
     FILE *pWrite;   //pointer for the output file
     pWrite=fopen("output.txt","w");
     
+    fprintf(pWrite,"Merge sort using threads\n ");
+    fprintf(pWrite,"Sorted array: ");
+    
     int i;
 
     for (i = 0; i <n; i++) 
     {
-         fprintf(pWrite,"%d ", arr[i]);
+         fprintf(pWrite,"%d ", arr1[i]);
     } 
     
-    fprintf(pWrite,"\nTime taken: %.9f \n\n", time_taken);
+    fprintf(pWrite,"\nTime taken: %.9f \n\n", time_taken[0]);
+    
+    fprintf(pWrite,"Merge sort without threads\n ");
+    
+    fprintf(pWrite,"Sorted array: ");
+    
+
+    for (i = 0; i <n; i++) 
+    {
+         fprintf(pWrite,"%d ", arr2[i]);
+    } 
+    
+    fprintf(pWrite,"\nTime taken: %.9f \n\n", time_taken[1]);
     
     fclose(pWrite);
 }
@@ -75,12 +93,12 @@ void display_arr()//function that displays matrices
 	
 	for (i = 0; i <n; i++) 
 	{ 
-	      printf("%d ", arr[i]);
+	      printf("%d ", arr1[i]);
 	} 
 	printf("\n");
 }
 
-void merge(int low, int mid, int high)
+void merge1(int low, int mid, int high)
 {
 	int i, j, k;
 	int n1 = mid - low + 1;// First subarray is arr[l..m]
@@ -88,9 +106,9 @@ void merge(int low, int mid, int high)
 	int *L=new int[n1], *R=new int[n2];
 
 	for (i = 0; i < n1; i++)
-		L[i] = arr[low + i];
+		L[i] = arr1[low + i];
 	for (j = 0; j < n2; j++)
-		R[j] = arr[mid + 1 + j];
+		R[j] = arr1[mid + 1 + j];
 
 	i = j = 0;
 	k = low;
@@ -99,12 +117,12 @@ void merge(int low, int mid, int high)
 	{
 		if (L[i] <= R[j])
 		{
-			arr[k] = L[i];
+			arr1[k] = L[i];
 			i++;
 		}
 		else
 		{
-			arr[k] = R[j];
+			arr1[k] = R[j];
 			j++;
 		}
 		k++;
@@ -112,18 +130,66 @@ void merge(int low, int mid, int high)
 
 	while (i < n1)
 	{
-		arr[k] = L[i];
+		arr1[k] = L[i];
 		i++;
 		k++;
 	}
 
 	while (j < n2)
 	{
-		arr[k] = R[j];
+		arr1[k] = R[j];
 		j++;
 		k++;
 	}
 }
+
+void merge2(int low, int mid, int high)
+
+{
+	int i, j, k;
+	int n1 = mid - low + 1;// First subarray is arr[l..m]
+	int n2 = high - mid;// Second subarray is arr[m+1..r]
+	int *L=new int[n1], *R=new int[n2];
+
+	for (i = 0; i < n1; i++)
+		L[i] = arr2[low + i];
+	for (j = 0; j < n2; j++)
+		R[j] = arr2[mid + 1 + j];
+
+	i = j = 0;
+	k = low;
+
+	while (i < n1 && j < n2)
+	{
+		if (L[i] <= R[j])
+		{
+			arr2[k] = L[i];
+			i++;
+		}
+		else
+		{
+			arr2[k] = R[j];
+			j++;
+		}
+		k++;
+	}
+
+	while (i < n1)
+	{
+		arr2[k] = L[i];
+		i++;
+		k++;
+	}
+
+	while (j < n2)
+	{
+		arr2[k] = R[j];
+		j++;
+		k++;
+	}
+}
+
+
 
 void *merge_sort(void *arguments)
 {
@@ -158,15 +224,29 @@ void *merge_sort(void *arguments)
          pthread_join(thread1, NULL);
          pthread_join(thread2, NULL);
          
-         merge(args->low, mid, args->high);
-    
-    
+         merge1(args->low, mid, args->high);
+ 
     }
     
-      
     pthread_exit(NULL);
     return NULL;
 }
+
+void merge_sort2(int low ,int high)
+{  
+    if(low < high)
+    {
+         int mid=low +(high - low)/2;
+         
+         merge_sort2(low,mid);
+         merge_sort2(mid+1,high);
+         
+         merge2(low, mid, high);
+    
+    
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -202,8 +282,18 @@ int main(int argc, char *argv[])
     
     auto end = std::chrono::high_resolution_clock::now();
     double seconds = std::chrono::duration<double>(end-start).count();
-    time_taken= static_cast<float>(seconds);
+    time_taken[0]= static_cast<float>(seconds);
     
+    start = std::chrono::high_resolution_clock::now();
+    
+    merge_sort2(0,n-1);
+    
+    end = std::chrono::high_resolution_clock::now();
+    seconds = std::chrono::duration<double>(end-start).count();
+    time_taken[1]= static_cast<float>(seconds);
+    
+   printf("Sorted array: ");
+   display_arr();
   
     save();
     return 0;
