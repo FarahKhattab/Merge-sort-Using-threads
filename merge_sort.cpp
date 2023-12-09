@@ -272,6 +272,7 @@ int main(int argc, char *argv[])
     args->low = 0;
     args->high = n-1;
               
+
     if (pthread_create(&thread, NULL, &merge_sort, (void *)args) != 0) 
     {
          printf("Uh-oh!\n");
