@@ -271,7 +271,6 @@ int main(int argc, char *argv[])
     arg_struct* args = (struct arg_struct*) malloc(sizeof(struct arg_struct));
     args->low = 0;
     args->high = n-1;
-              
 
     if (pthread_create(&thread, NULL, &merge_sort, (void *)args) != 0) 
     {
